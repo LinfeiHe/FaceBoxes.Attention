@@ -75,15 +75,16 @@ class FaceBoxes(nn.Module):
     self.inception2 = Inception()
     self.inception3 = Inception()
 
+    self.conv_att1 = BasicConv2d(128, 128, kernel_size=1, stride=1, padding=0)
+    self.conv_att2 = BasicConv2d(128, 2, kernel_size=3, stride=1, padding=1)
+
     self.conv3_1 = BasicConv2d(128, 128, kernel_size=1, stride=1, padding=0)
     self.conv3_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
-    self.lat_conv3 = nn.Conv2d(128, 256, kernel_size=1, stride=1, padding=0)
     
     self.conv4_1 = BasicConv2d(256, 128, kernel_size=1, stride=1, padding=0)
     self.conv4_2 = BasicConv2d(128, 256, kernel_size=3, stride=2, padding=1)
-    self.lat_conv4 = nn.Conv2d(256, 256, kernel_size=1, stride=1, padding=0)
 
-    self.att, self.loc, self.conf = self.multibox(self.num_classes)
+    self.loc, self.conf = self.multibox(self.num_classes)
     
     if self.phase == 'test':
         self.softmax = nn.Softmax(dim=-1)
@@ -103,26 +104,18 @@ class FaceBoxes(nn.Module):
   def multibox(self, num_classes):
     loc_layers = []
     conf_layers = []
-    att_layers = []
-    att_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
-    loc_layers += [nn.Conv2d(256, 21 * 4, kernel_size=3, padding=1)]
-    conf_layers += [nn.Conv2d(256, 21 * num_classes, kernel_size=3, padding=1)]
 
-    att_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(128, 21 * 4, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(128, 21 * num_classes, kernel_size=3, padding=1)]
+
     loc_layers += [nn.Conv2d(256, 1 * 4, kernel_size=3, padding=1)]
     conf_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
 
-    att_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
     loc_layers += [nn.Conv2d(256, 1 * 4, kernel_size=3, padding=1)]
     conf_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
-    return nn.Sequential(*att_layers), nn.Sequential(*loc_layers), nn.Sequential(*conf_layers)
-
-  def _upsample_add(self, x, y):
-    _, _, H, W = y.size()
-    return F.interpolate(x, size=(H, W), mode='bilinear', align_corners=True) + y
+    return nn.Sequential(*loc_layers), nn.Sequential(*conf_layers)
 
   def forward(self, x):
-    att = list()
     loc = list()
     conf = list()
 
@@ -130,6 +123,13 @@ class FaceBoxes(nn.Module):
     x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
     x = self.conv2(x)
     x = F.max_pool2d(x, kernel_size=3, stride=2, padding=1)
+
+    x = self.conv_att1(x)
+    att = self.conv_att2(x)
+    ax = F.softmax(att, dim=1)[:, 1, :, :]
+    ax = ax.unsqueeze(dim=1)
+    x = x * torch.exp(ax)
+
     x = self.inception1(x)
     x = self.inception2(x)
     c3 = self.inception3(x)
@@ -140,22 +140,13 @@ class FaceBoxes(nn.Module):
     x = self.conv4_1(c4)
     c5 = self.conv4_2(x)
 
-    p5 = c5
-    p4 = self._upsample_add(p5, self.lat_conv4(c4))
-    p3 = self._upsample_add(p4, self.lat_conv3(c3))
     detection_dimension = [c3.shape[2:], c4.shape[2:], c5.shape[2:]]
-    sources = [p3, p4, p5]
+    sources = [c3, c4, c5]
 
     detection_dimension = torch.Tensor(detection_dimension)
     detection_dimension = detection_dimension.cuda()
 
-    for (x, a, l, c) in zip(sources, self.att, self.loc, self.conf):
-        ax = a(x)
-        att.append(ax)
-        ax = F.softmax(ax, dim=1)[:, 1, :, :]
-        ax = ax.unsqueeze(dim=1)
-        x = x * torch.exp(ax)
-
+    for (x, l, c) in zip(sources, self.loc, self.conf):
         loc.append(l(x).permute(0, 2, 3, 1).contiguous())
         conf.append(c(x).permute(0, 2, 3, 1).contiguous())
 

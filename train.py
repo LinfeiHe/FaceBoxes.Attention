@@ -1,7 +1,7 @@
 from __future__ import print_function
 import os
 import numpy as np
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
@@ -16,18 +16,18 @@ from models.faceboxes import FaceBoxes
 import cv2
 parser = argparse.ArgumentParser(description='FaceBoxes Training')
 parser.add_argument('--training_dataset', default='./data/MAFA_TRAIN', help='Training dataset directory')
-parser.add_argument('-b', '--batch_size', default=32, type=int, help='Batch size for training')
-parser.add_argument('--num_workers', default=8, type=int, help='Number of workers used in dataloading')
+parser.add_argument('-b', '--batch_size', default=8, type=int, help='Batch size for training')
+parser.add_argument('--num_workers', default=2, type=int, help='Number of workers used in dataloading')
 parser.add_argument('--cuda', default=True, type=bool, help='Use cuda to train model')
-parser.add_argument('--ngpu', default=2, type=int, help='gpus')
+parser.add_argument('--ngpu', default=1, type=int, help='gpus')
 parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
-parser.add_argument('--resume_net', default='weights_1/Final_FaceBoxes.pth', help='resume net for retraining')
+parser.add_argument('--resume_net', default=None, help='resume net for retraining')
 parser.add_argument('--resume_epoch', default=0, type=int, help='resume iter for retraining')
-parser.add_argument('-max', '--max_epoch', default=100, type=int, help='max epoch for retraining')
+parser.add_argument('-max', '--max_epoch', default=300, type=int, help='max epoch for retraining')
 parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
 parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD')
-parser.add_argument('--save_folder', default='./weights/', help='Location to save checkpoint models')
+parser.add_argument('--save_folder', default='./weights_att_incep/', help='Location to save checkpoint models')
 args = parser.parse_args()
 
 if not os.path.exists(args.save_folder):
@@ -111,7 +111,7 @@ def train():
         images, targets, masks = next(batch_iterator)
         images = images.to(device)
         targets = [anno.to(device) for anno in targets]
-        masks = [mask.to(device) for mask in masks]
+        masks = masks.to(device)
 
         # def mask_to_pic(img, mask, name):
         #     mask = mask.cpu().numpy()
@@ -124,9 +124,7 @@ def train():
         
         # backprop
         optimizer.zero_grad()
-        loss_m = criterion_m(att[0], masks[0])
-        for ii in range(1, 3):
-            loss_m += criterion_m(att[ii], masks[ii])
+        loss_m = criterion_m(att, masks)
         loss_l, loss_c = criterion(out, priors, targets)
         loss = cfg['loc_weight'] * loss_l + loss_c + cfg['mask_weight'] * loss_m
         loss.backward()

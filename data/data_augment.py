@@ -174,11 +174,8 @@ def preproc_for_test(image, mask, insize, mean):
     image = image.astype(np.float32)
     image -= mean
 
-    masks = []
-    for div in [32, 64, 128]:
-        mask = cv2.resize(mask, (int(insize/div), int(insize/div)), interpolation=cv2.INTER_NEAREST)
-        masks.append(mask)
-    return image.transpose(2, 0, 1), masks
+    mask = cv2.resize(mask, (int(insize/32), int(insize/32)), interpolation=cv2.INTER_NEAREST)
+    return image.transpose(2, 0, 1), mask
 
 
 class preproc(object):
@@ -202,11 +199,11 @@ class preproc(object):
         height, width, _ = image_t.shape
         mask = _mask(image_t, boxes_t)
 
-        image_t, masks = preproc_for_test(image_t, mask, self.img_dim, self.rgb_means)
+        image_t, mask = preproc_for_test(image_t, mask, self.img_dim, self.rgb_means)
         boxes_t[:, 0::2] /= width
         boxes_t[:, 1::2] /= height
 
         labels_t = np.expand_dims(labels_t, 1)
         targets_t = np.hstack((boxes_t, labels_t))
 
-        return image_t, targets_t, masks
+        return image_t, targets_t, mask
