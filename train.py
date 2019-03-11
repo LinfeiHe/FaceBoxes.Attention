@@ -118,7 +118,9 @@ def train():
         #     img = np.uint8(img.cpu().numpy().transpose(1, 2, 0) + rgb_means)
         #     cv2.imwrite(name, img * cv2.resize(mask, (1024, 1024), interpolation=cv2.INTER_NEAREST)[..., None])
         # for i in range(len(masks[1])):
-        #     mask_to_pic(images[i], masks[0][i], 'sample/test{}.jpg'.format(i))
+        #     mask_to_pic(images[i], masks[0][i], 'sample/test{}_1.jpg'.format(i))
+        #     mask_to_pic(images[i], masks[1][i], 'sample/test{}_2.jpg'.format(i))
+        #     mask_to_pic(images[i], masks[2][i], 'sample/test{}_3.jpg'.format(i))
         # forward
         att, out = net(images)
         
