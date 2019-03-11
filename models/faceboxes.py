@@ -152,7 +152,7 @@ class FaceBoxes(nn.Module):
     for (x, a, l, c) in zip(sources, self.att, self.loc, self.conf):
         ax = a(x)
         att.append(ax)
-        x = x * torch.exp(ax)
+        x = x * ax
 
         loc.append(l(x).permute(0, 2, 3, 1).contiguous())
         conf.append(c(x).permute(0, 2, 3, 1).contiguous())

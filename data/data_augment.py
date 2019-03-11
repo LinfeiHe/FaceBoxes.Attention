@@ -176,7 +176,7 @@ def preproc_for_test(image, mask, insize, mean):
 
     masks = []
     for div in [32, 64, 128]:
-        mask = cv2.resize(mask, (int(insize/div), int(insize/div)), interpolation=cv2.interp_method)
+        mask = cv2.resize(mask, (int(insize/div), int(insize/div)), interpolation=interp_method)
         masks.append(mask)
     return image.transpose(2, 0, 1), masks
 
