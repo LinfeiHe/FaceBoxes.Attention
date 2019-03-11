@@ -67,7 +67,7 @@ net.to(device)
 cudnn.benchmark = True
 
 optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-criterion_m = CrossEntropyLoss2d()
+criterion_m = torch.nn.MSELoss(reduction='sum')
 criterion = MultiBoxLoss(num_classes, 0.35, True, 0, True, 7, 0.35, False)
 
 priorbox = PriorBox(cfg)

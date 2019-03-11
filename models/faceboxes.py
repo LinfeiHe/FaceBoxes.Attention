@@ -104,15 +104,15 @@ class FaceBoxes(nn.Module):
     loc_layers = []
     conf_layers = []
     att_layers = []
-    att_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
+    att_layers += [nn.Conv2d(256, 1, kernel_size=3, padding=1)]
     loc_layers += [nn.Conv2d(256, 21 * 4, kernel_size=3, padding=1)]
     conf_layers += [nn.Conv2d(256, 21 * num_classes, kernel_size=3, padding=1)]
 
-    att_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
+    att_layers += [nn.Conv2d(256, 1, kernel_size=3, padding=1)]
     loc_layers += [nn.Conv2d(256, 1 * 4, kernel_size=3, padding=1)]
     conf_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
 
-    att_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
+    att_layers += [nn.Conv2d(256, 1, kernel_size=3, padding=1)]
     loc_layers += [nn.Conv2d(256, 1 * 4, kernel_size=3, padding=1)]
     conf_layers += [nn.Conv2d(256, 1 * num_classes, kernel_size=3, padding=1)]
     return nn.Sequential(*att_layers), nn.Sequential(*loc_layers), nn.Sequential(*conf_layers)
@@ -152,8 +152,6 @@ class FaceBoxes(nn.Module):
     for (x, a, l, c) in zip(sources, self.att, self.loc, self.conf):
         ax = a(x)
         att.append(ax)
-        ax = F.softmax(ax, dim=1)[:, 1, :, :]
-        ax = ax.unsqueeze(dim=1)
         x = x * torch.exp(ax)
 
         loc.append(l(x).permute(0, 2, 3, 1).contiguous())

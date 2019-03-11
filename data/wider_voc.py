@@ -125,6 +125,6 @@ def detection_collate(batch):
                 annos = torch.from_numpy(tup).float()
                 targets.append(annos)
     for i in range(len(batch[0][-1])):
-        masks.append(torch.stack([torch.from_numpy(b[-1][i]).long() for b in batch], 0))
+        masks.append(torch.stack([torch.from_numpy(b[-1][i]) for b in batch], 0))
 
     return (torch.stack(imgs, 0), targets, masks)

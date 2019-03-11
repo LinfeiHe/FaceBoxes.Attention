@@ -160,7 +160,7 @@ def _mirror(image, boxes):
 
 
 def _mask(image, boxes):
-    mask = np.zeros((image.shape[:2]), dtype=np.int)
+    mask = np.zeros((image.shape[:2]), dtype=np.float32)
     for i in range(len(boxes)):
         mask[int(boxes[i, 1]): int(boxes[i, 3]) + 1, int(boxes[i, 0]): int(boxes[i, 2]) + 1] = 1
 
@@ -176,7 +176,7 @@ def preproc_for_test(image, mask, insize, mean):
 
     masks = []
     for div in [32, 64, 128]:
-        mask = cv2.resize(mask, (int(insize/div), int(insize/div)), interpolation=cv2.INTER_NEAREST)
+        mask = cv2.resize(mask, (int(insize/div), int(insize/div)), interpolation=cv2.interp_method)
         masks.append(mask)
     return image.transpose(2, 0, 1), masks
 
