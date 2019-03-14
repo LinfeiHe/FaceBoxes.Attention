@@ -1,7 +1,7 @@
 from __future__ import print_function
 import os
 import numpy as np
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
@@ -15,14 +15,14 @@ import math
 from models.faceboxes import FaceBoxes
 import cv2
 parser = argparse.ArgumentParser(description='FaceBoxes Training')
-parser.add_argument('--training_dataset', default='./data/MAFA_TRAIN', help='Training dataset directory')
+parser.add_argument('--training_dataset', default='./data/WIDER_FACE', help='Training dataset directory')
 parser.add_argument('-b', '--batch_size', default=32, type=int, help='Batch size for training')
 parser.add_argument('--num_workers', default=8, type=int, help='Number of workers used in dataloading')
 parser.add_argument('--cuda', default=True, type=bool, help='Use cuda to train model')
-parser.add_argument('--ngpu', default=2, type=int, help='gpus')
+parser.add_argument('--ngpu', default=1, type=int, help='gpus')
 parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
-parser.add_argument('--resume_net', default='weights_1/Final_FaceBoxes.pth', help='resume net for retraining')
+parser.add_argument('--resume_net', default=None, help='resume net for retraining')
 parser.add_argument('--resume_epoch', default=0, type=int, help='resume iter for retraining')
 parser.add_argument('-max', '--max_epoch', default=100, type=int, help='max epoch for retraining')
 parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
@@ -76,6 +76,13 @@ with torch.no_grad():
     priors = priors.to(device)
 
 
+def draw_bbox(frame, bboxes):
+    for i in range(len(bboxes)):
+        bbox = bboxes[i].astype(np.int)
+        frame = cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
+    return frame
+
+
 def train():
     net.train()
     epoch = 0 + args.resume_epoch
@@ -118,7 +125,12 @@ def train():
         #     img = np.uint8(img.cpu().numpy().transpose(1, 2, 0) + rgb_means)
         #     cv2.imwrite(name, img * cv2.resize(mask, (1024, 1024), interpolation=cv2.INTER_NEAREST)[..., None])
         # for i in range(len(masks[1])):
-        #     mask_to_pic(images[i], masks[0][i], 'sample/test{}.jpg'.format(i))
+        #     img = np.uint8(images[i].cpu().numpy().transpose(1, 2, 0) + rgb_means)
+        #     bboxs = targets[i][:, :-1].cpu().numpy().astype(np.int)
+        #     cv2.imwrite('sample/test{}_0.jpg'.format(i), draw_bbox(img.copy(), bboxs))
+        #     mask_to_pic(images[i], masks[0][i], 'sample/test{}_1.jpg'.format(i))
+        #     mask_to_pic(images[i], masks[1][i], 'sample/test{}_2.jpg'.format(i))
+        #     mask_to_pic(images[i], masks[2][i], 'sample/test{}_3.jpg'.format(i))
         # forward
         att, out = net(images)
         

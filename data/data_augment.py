@@ -167,9 +167,13 @@ def _mask(image, boxes):
     return mask
 
 
-def preproc_for_test(image, mask, insize, mean):
+def preproc_for_test(image, boxes, mask, insize, mean):
     interp_methods = [cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_NEAREST, cv2.INTER_LANCZOS4]
     interp_method = interp_methods[random.randrange(5)]
+    height, width = image.shape[:2]
+    r_h = insize / height
+    r_w = insize / width
+    boxes = boxes * [r_w, r_h, r_w, r_h]
     image = cv2.resize(image, (insize, insize), interpolation=interp_method)
     image = image.astype(np.float32)
     image -= mean
@@ -178,7 +182,7 @@ def preproc_for_test(image, mask, insize, mean):
     for div in [32, 64, 128]:
         mask = cv2.resize(mask, (int(insize/div), int(insize/div)), interpolation=cv2.INTER_NEAREST)
         masks.append(mask)
-    return image.transpose(2, 0, 1), masks
+    return image.transpose(2, 0, 1), boxes, masks
 
 
 class preproc(object):
@@ -202,7 +206,7 @@ class preproc(object):
         height, width, _ = image_t.shape
         mask = _mask(image_t, boxes_t)
 
-        image_t, masks = preproc_for_test(image_t, mask, self.img_dim, self.rgb_means)
+        image_t, boxes_t, masks = preproc_for_test(image_t, boxes_t, mask, self.img_dim, self.rgb_means)
         boxes_t[:, 0::2] /= width
         boxes_t[:, 1::2] /= height
 
