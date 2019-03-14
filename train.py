@@ -24,10 +24,10 @@ parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='i
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
 parser.add_argument('--resume_net', default=None, help='resume net for retraining')
 parser.add_argument('--resume_epoch', default=0, type=int, help='resume iter for retraining')
-parser.add_argument('-max', '--max_epoch', default=100, type=int, help='max epoch for retraining')
+parser.add_argument('-max', '--max_epoch', default=300, type=int, help='max epoch for retraining')
 parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
 parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD')
-parser.add_argument('--save_folder', default='./weights/', help='Location to save checkpoint models')
+parser.add_argument('--save_folder', default='./weights_fpn_att_bbox_WIDER/', help='Location to save checkpoint models')
 args = parser.parse_args()
 
 if not os.path.exists(args.save_folder):
@@ -144,7 +144,7 @@ def train():
         loss.backward()
         optimizer.step()
         load_t1 = time.time()
-        print('Epoch:' + repr(epoch) + ' || epochiter: ' + repr(iteration % epoch_size) + '/' + repr(epoch_size) +
+        print('Epoch:' + repr(epoch) + '/' + repr(args.max_epoch) + ' || epochiter: ' + repr(iteration % epoch_size) + '/' + repr(epoch_size) +
               '|| Totel iter ' + repr(iteration) + ' || L: %.4f C: %.4f M: %.4f||' %
               (cfg['loc_weight']*loss_l.item(), loss_c.item(), cfg['mask_weight'] * loss_m.item()) +
               'Batch time: %.4f sec. ||' % (load_t1 - load_t0) + 'LR: %.8f' % (lr))
