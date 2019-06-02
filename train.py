@@ -152,14 +152,15 @@ def train():
         # forward
         att, out = net(images)
 
-        for j in range(len(images)):
-            img = np.uint8(images[j].cpu().numpy().transpose(1, 2, 0) + rgb_means)
-            frame = draw_bbox(img.copy(), targets[j].cpu().numpy(), False)
-            save_path = 'sample/test{}_face.jpg'.format(j)
-            cv2.imwrite(save_path, frame)
-            for kk in range(3):
-                # mask_to_pic(images[j], masks[kk][j], 'sample/test{}_{}_mask.jpg'.format(j, kk))
-                att_to_pic(images[j], att[kk][j], 'sample/test{}_{}_att.jpg'.format(j, kk))
+        # 输出原图的检测框，mask权重图和attention权重图
+        # for j in range(len(images)):
+        #     img = np.uint8(images[j].cpu().numpy().transpose(1, 2, 0) + rgb_means)
+        #     frame = draw_bbox(img.copy(), targets[j].cpu().numpy(), False)
+        #     save_path = 'sample/test{}_face.jpg'.format(j)
+        #     cv2.imwrite(save_path, frame)
+        #     for kk in range(3):
+        #         # mask_to_pic(images[j], masks[kk][j], 'sample/test{}_{}_mask.jpg'.format(j, kk))
+        #         att_to_pic(images[j], att[kk][j], 'sample/test{}_{}_att.jpg'.format(j, kk))
         
         # backprop
         optimizer.zero_grad()
