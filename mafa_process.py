@@ -70,8 +70,10 @@ def cal_img_avgsize(imgs_folder):
     import cv2
     avg_h = 0.0
     avg_w = 0.0
-    min_h = 100
-    min_w = 100
+    min_h = 1000
+    min_w = 1000
+    min_label_h = 100
+    min_label_w = 100
 
     train_mat = '/data/Face/detection/MAFA/LabelTrainAll.mat'
     data = loadmat(train_mat)
@@ -80,20 +82,23 @@ def cal_img_avgsize(imgs_folder):
         for j in range(len(label[i])):
             w = label[i][j, 2]
             h = label[i][j, 3]
-            min_h = min(min_h, h)
-            min_w = min(min_w, w)
-    img_list = gb.glob(os.path.join(imgs_folder, '*.jpg'))
-    # for img_path in img_list:
-    #     img = cv2.imread(img_path)
-    #     h, w, _ = img.shape
-    #     avg_h += h
-    #     avg_w += w
-    # avg_h /= len(img_list)
-    # avg_w /= len(img_list)
-    print('avg_h: {}, avg_w: {}, min_h: {}, min_w: {}'.format(avg_h, avg_w, min_h, min_w))
+            min_label_h = min(min_label_h, h)
+            min_label_w = min(min_label_w, w)
+    img_list = gb.glob(os.path.join(imgs_folder, 'test*.jpg'))
+    for img_path in img_list:
+        img = cv2.imread(img_path)
+        h, w, _ = img.shape
+        avg_h += h
+        avg_w += w
+        min_h = min(min_h, h)
+        min_w = min(min_w, w)
+    avg_h /= len(img_list)
+    avg_w /= len(img_list)
+    print('avg_h: {}, avg_w: {}, min_h: {}, min_w: {}'.
+          format(avg_h, avg_w, min_h, min_w))
 
 
 if __name__ == '__main__':
-    # create_xml_file()
-    cal_img_avgsize('/home/helinfei/PycharmProjects/FaceBoxes.Attention/data/MAFA_TRAIN/images')
+    create_xml_file()
+    # cal_img_avgsize('/home/helinfei/PycharmProjects/FaceBoxes.Attention/data/MAFA_TRAIN/images')
 

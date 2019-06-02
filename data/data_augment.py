@@ -195,10 +195,12 @@ class preproc(object):
         boxes = targets[:, :-1].copy()
         labels = targets[:, -1].copy()
 
-        image_t = _distort(image)
+        # image_t = _distort(image)
         # image_t, boxes_t = _expand(image_t, boxes, self.cfg['rgb_mean'], self.cfg['max_expand_ratio'])
-        image_t, boxes_t, labels_t = _crop(image_t, boxes, labels, self.img_dim, self.rgb_means)
-        image_t, boxes_t = _mirror(image_t, boxes_t)
+        # image_t, boxes_t, labels_t = _crop(image_t, boxes, labels, self.img_dim, self.rgb_means)
+        # image_t, boxes_t = _mirror(image_t, boxes_t)
+        image_t, boxes_t, labels_t = image, boxes, labels
+
         height, width, _ = image_t.shape
         mask = _mask(image_t, boxes_t)
 

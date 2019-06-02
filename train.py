@@ -1,7 +1,6 @@
 from __future__ import print_function
 import os
-import numpy as np
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+
 import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
@@ -14,20 +13,23 @@ import time
 import math
 from models.faceboxes import FaceBoxes
 import cv2
+import numpy as np
+
 parser = argparse.ArgumentParser(description='FaceBoxes Training')
-parser.add_argument('--training_dataset', default='./data/MAFA_TRAIN', help='Training dataset directory')
+parser.add_argument('--training_dataset', default='./data/MAFA_TRAIN',
+                    help='Training dataset directory, MAFA_TRAIN or WIDER_FACE')
 parser.add_argument('-b', '--batch_size', default=32, type=int, help='Batch size for training')
 parser.add_argument('--num_workers', default=8, type=int, help='Number of workers used in dataloading')
 parser.add_argument('--cuda', default=True, type=bool, help='Use cuda to train model')
-parser.add_argument('--ngpu', default=2, type=int, help='gpus')
+parser.add_argument('--ngpu', default=1, type=int, help='gpus')
 parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float, help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
-parser.add_argument('--resume_net', default='weights_1/Final_FaceBoxes.pth', help='resume net for retraining')
+parser.add_argument('--resume_net', default='weights/Final_FaceBoxes.pth', help='resume net for retraining')
 parser.add_argument('--resume_epoch', default=0, type=int, help='resume iter for retraining')
 parser.add_argument('-max', '--max_epoch', default=100, type=int, help='max epoch for retraining')
 parser.add_argument('--weight_decay', default=5e-4, type=float, help='Weight decay for SGD')
 parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for SGD')
-parser.add_argument('--save_folder', default='./weights/', help='Location to save checkpoint models')
+parser.add_argument('--save_folder', default='./weights_2/', help='Location to save checkpoint models')
 args = parser.parse_args()
 
 if not os.path.exists(args.save_folder):
@@ -44,6 +46,40 @@ momentum = args.momentum
 net = FaceBoxes('train', img_dim, num_classes)
 print("Printing net...")
 print(net)
+
+
+def draw_bbox(frame, bboxes, show_score):
+    for i in range(len(bboxes)):
+        bbox = bboxes[i, :4]
+        score = bboxes[i, 4]
+        bbox = [int(bbox[i] * 1024) for i in range(4)]
+        if score > 0.88:
+            frame = cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
+            if show_score:
+                frame = cv2.putText(frame,
+                                    str(score)[:5],
+                                    (bbox[0], bbox[1]),
+                                    cv2.FONT_HERSHEY_SIMPLEX,
+                                    1,
+                                    (0, 255, 255),
+                                    2,
+                                    cv2.LINE_AA)
+    return frame
+
+
+def mask_to_pic(img, mask, name):
+    mask = mask.detach().cpu().numpy()
+    img = np.uint8(img.cpu().numpy().transpose(1, 2, 0) + rgb_means)
+    cv2.imwrite(name, img * cv2.resize(mask, (1024, 1024), interpolation=cv2.INTER_NEAREST)[..., None])
+
+
+def att_to_pic(img, att, name):
+    att = torch.nn.functional.softmax(att, dim=0)[1, :, :]
+    att = att.unsqueeze(dim=2)
+    att = att.detach().cpu().numpy()
+    img = np.uint8(img.cpu().numpy().transpose(1, 2, 0) + rgb_means)
+    cv2.imwrite(name, img * cv2.resize(att, (1024, 1024), interpolation=cv2.INTER_NEAREST)[..., None])
+
 
 if args.resume_net is not None:
     print('Loading resume network...')
@@ -113,14 +149,17 @@ def train():
         targets = [anno.to(device) for anno in targets]
         masks = [mask.to(device) for mask in masks]
 
-        # def mask_to_pic(img, mask, name):
-        #     mask = mask.cpu().numpy()
-        #     img = np.uint8(img.cpu().numpy().transpose(1, 2, 0) + rgb_means)
-        #     cv2.imwrite(name, img * cv2.resize(mask, (1024, 1024), interpolation=cv2.INTER_NEAREST)[..., None])
-        # for i in range(len(masks[1])):
-        #     mask_to_pic(images[i], masks[0][i], 'sample/test{}.jpg'.format(i))
         # forward
         att, out = net(images)
+
+        for j in range(len(images)):
+            img = np.uint8(images[j].cpu().numpy().transpose(1, 2, 0) + rgb_means)
+            frame = draw_bbox(img.copy(), targets[j].cpu().numpy(), False)
+            save_path = 'sample/test{}_face.jpg'.format(j)
+            cv2.imwrite(save_path, frame)
+            for kk in range(3):
+                # mask_to_pic(images[j], masks[kk][j], 'sample/test{}_{}_mask.jpg'.format(j, kk))
+                att_to_pic(images[j], att[kk][j], 'sample/test{}_{}_att.jpg'.format(j, kk))
         
         # backprop
         optimizer.zero_grad()
@@ -155,4 +194,5 @@ def adjust_learning_rate(optimizer, gamma, epoch, step_index, iteration, epoch_s
 
 
 if __name__ == '__main__':
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     train()

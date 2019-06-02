@@ -14,17 +14,34 @@ from utils.timer import Timer
 
 parser = argparse.ArgumentParser(description='FaceBoxes')
 
-parser.add_argument('-m', '--trained_model', default='weights/FaceBoxes.pth',
+parser.add_argument('-m', '--trained_model', default='weights/Final_FaceBoxes.pth',
                     type=str, help='Trained state_dict file path to open')
 parser.add_argument('--save_folder', default='eval/', type=str, help='Dir to save results')
 parser.add_argument('--cuda', default=True, type=bool, help='Use cuda to train model')
 parser.add_argument('--cpu', default=False, type=bool, help='Use cpu nms')
-parser.add_argument('--dataset', default='AFW', type=str, choices=['AFW', 'PASCAL', 'FDDB', 'MAFA'], help='dataset')
+parser.add_argument('--dataset', default='MAFA', type=str, choices=['AFW', 'PASCAL', 'FDDB', 'MAFA'], help='dataset')
 parser.add_argument('--confidence_threshold', default=0.05, type=float, help='confidence_threshold')
 parser.add_argument('--top_k', default=5000, type=int, help='top_k')
 parser.add_argument('--nms_threshold', default=0.3, type=float, help='nms_threshold')
 parser.add_argument('--keep_top_k', default=750, type=int, help='keep_top_k')
 args = parser.parse_args()
+
+
+def draw_bbox(frame, bboxes):
+    for i in range(len(bboxes)):
+        bbox = bboxes[i, :4]
+        score = bboxes[i, 4]
+        if score > 0.88:
+            frame = cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
+            frame = cv2.putText(frame,
+                                str(score)[:5],
+                                (bbox[0], bbox[1]),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                1,
+                                (0, 255, 255),
+                                2,
+                                cv2.LINE_AA)
+    return frame
 
 
 def check_keys(model, pretrained_state_dict):
@@ -100,9 +117,11 @@ if __name__ == '__main__':
     # testing begin
     for i, img_name in enumerate(test_dataset):
         image_path = testset_folder + img_name + '.jpg'
-        img = np.float32(cv2.imread(image_path, cv2.IMREAD_COLOR))
+        img_ = np.float32(cv2.imread(image_path, cv2.IMREAD_COLOR))
         if resize != 1:
-            img = cv2.resize(img, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)
+            img = cv2.resize(img_, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)
+        else:
+            img = img_
         im_height, im_width, _ = img.shape
         scale = torch.Tensor([img.shape[1], img.shape[0], img.shape[1], img.shape[0]])
         img -= (104, 117, 123)
@@ -146,6 +165,13 @@ if __name__ == '__main__':
         dets = dets[:args.keep_top_k, :]
         _t['misc'].toc()
 
+        # 输出检测结果图，要求置信度大于0.88，且人脸多于5张
+        # if np.sum(dets[:, 4] >= 0.88) > 5:
+        #     frame = draw_bbox(img_.copy(), dets)
+        #     save_path = 'sample/' + img_name + '.jpg'
+        #     cv2.imwrite(save_path, frame)
+        # else:
+        #     continue
         # save dets
         if args.dataset == "FDDB":
             fw.write('{:s}\n'.format(img_name))
@@ -165,8 +191,9 @@ if __name__ == '__main__':
                 ymin = dets[k, 1]
                 xmax = dets[k, 2]
                 ymax = dets[k, 3]
-                ymin += 0.2 * (ymax - ymin + 1)
+                # ymin += 0.2 * (ymax - ymin + 1)
                 score = dets[k, 4]
+
                 fw.write('{:s} {:.3f} {:.1f} {:.1f} {:.1f} {:.1f}\n'.format(img_name, score, xmin, ymin, xmax, ymax))
         print('im_detect: {:d}/{:d} forward_pass_time: {:.4f}s misc: {:.4f}s'.format(i + 1, num_images, _t['forward_pass'].average_time, _t['misc'].average_time))
     fw.close()
